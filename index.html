@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathCore — Учебный Центр</title>
+    <style>
+        :root {
+            --primary: #1865f2;
+            --success: #00857c;
+            --bg: #f6f7f9;
+            --dark: #21242c;
+            --border: #d6d9dc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--dark); }
+        
+        header { 
+            background: white; 
+            border-bottom: 1px solid var(--border); 
+            padding: 10px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+        }
+        .logo { font-weight: 800; font-size: 20px; color: var(--primary); text-decoration: none; }
+        .score-badge { background: #e8f5e9; color: var(--success); padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+
+        .layout { display: grid; grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; gap: 20px; padding: 15px; }
+        @media (min-width: 800px) { .layout { grid-template-columns: 300px 1fr; } }
+
+        /* Sidebar - Оглавление учебника */
+        .sidebar { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 15px; height: 80vh; overflow-y: auto; }
+        .sidebar h3 { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .topic-link { 
+            display: block; 
+            padding: 10px; 
+            margin: 4px 0; 
+            font-size: 14px; 
+            color: #444; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .topic-link:hover { background: #f0f4ff; }
+        .topic-link.active { background: var(--primary); color: white; }
+        .topic-link.completed { border-left: 4px solid var(--success); background: #f1faf9; }
+
+        /* Главная область */
+        .workspace { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 25px; min-height: 400px; text-align: center; }
+        .progress-bar-container { width: 100%; height: 8px; background: #eee; border-radius: 4px; margin: 20px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--success); width: 0%; transition: 0.4s; }
+
+        #question { font-size: 36px; font-weight: bold; margin: 30px 0; font-family: serif; color: #111; }
+        input { font-size: 24px; padding: 12px; width: 80%; max-width: 200px; text-align: center; border: 2px solid #ddd; border-radius: 10px; margin-bottom: 15px; outline: none; }
+        input:focus { border-color: var(--primary); }
+        
+        .btn { background: var(--success); color: white; border: none; padding: 16px 30px; font-size: 18px; border-radius: 10px; cursor: pointer; width: 80%; max-width: 300px; font-weight: bold; box-shadow: 0 4px 0 #005a54; }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+        
+        #feedback { margin-top: 20px; font-weight: bold; min-height: 24px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="#" class="logo" onclick="location.reload()">MathCore</a>
+    <div class="score-badge" id="total-score">Баллы: 0</div>
+</header>
+
+<div class="layout">
+    <aside class="sidebar">
+        <h3>Глава 1</h3>
+        <div id="list-g1"></div>
+        <h3 style="margin-top:20px">Глава 2</h3>
+        <div id="list-g2"></div>
+    </aside>
+
+    <main class="workspace">
+        <div id="home-screen">
+            <h2 style="color: var(--primary)">Математический Центр</h2>
+            <p>Добро пожаловать в программу Graduate. Выберите тему слева, чтобы начать мини-тест из 10 вопросов.</p>
+            <div style="background: #fff9c4; padding: 15px; border-radius: 8px; font-size: 14px;">
+                ⚠️ <b>Правило:</b> Одна ошибка сбрасывает прогресс теста. Нужно решить 10 примеров подряд!
+            </div>
+        </div>
+
+        <div id="quiz-screen" style="display:none">
+            <h3 id="current-topic-name" style="margin:0; font-size: 16px; color: #666;">Тема</h3>
+            <div class="progress-bar-container"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="question">--</div>
+            <input type="number" id="user-input" placeholder="?" inputmode="decimal">
+            <br>
+            <button class="btn" onclick="handleAnswer()">Проверить</button>
+            <div id="feedback"></div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // Список всех тем (Graduate и далее)
+    const topics = [
+        { id: 1, title: "1. Сложение и вычитание", chapter: 1 },
+        { id: 2, title: "2. Таблица умножения", chapter: 1 },
+        { id: 3, title: "3. Деление", chapter: 1 },
+        { id: 4, title: "4. Признаки делимости", chapter: 1 },
+        { id: 5, title: "5. НОД и НОК", chapter: 1 },
+        { id: 6, title: "6. Обыкновенные дроби", chapter: 1 },
+        { id: 7, title: "7. Десятичные дроби", chapter: 1 },
+        { id: 8, title: "8. Линейные уравнения", chapter: 1 },
+        { id: 9, title: "9. Степени", chapter: 1 },
+        { id: 11, title: "11. Одночлены", chapter: 2 },
+        { id: 12, title: "12. Многочлены", chapter: 2 }
+    ];
+
+    let currentTopic = null;
+    let step = 0;
+    let correctAnswer = 0;
+    let totalScore = parseInt(localStorage.getItem('mathScore')) || 0;
+    let completed = JSON.parse(localStorage.getItem('mathDone')) || [];
+
+    // Инициализация меню
+    function initMenu() {
+        const g1 = document.getElementById('list-g1');
+        const g2 = document.getElementById('list-g2');
+        topics.forEach(t => {
+            const el = document.createElement('div');
+            el.className = `topic-link ${completed.includes(t.id) ? 'completed' : ''}`;
+            el.innerText = t.title;
+            el.onclick = () => startQuiz(t);
+            if(t.chapter === 1) g1.appendChild(el); else g2.appendChild(el);
+        });
+        document.getElementById('total-score').innerText = `Баллы: ${totalScore}`;
+    }
+
+    function startQuiz(topic) {
+        currentTopic = topic;
+        step = 0;
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        document.getElementById('current-topic-name').innerText = topic.title;
+        generateTask();
+        updateProgress();
+    }
+
+    function generateTask() {
+        let n1, n2;
+        const id = currentTopic.id;
+        
+        if (id === 1) { // Сложение и вычитание
+            n1 = Math.floor(Math.random() * 200) + 50;
+            n2 = Math.floor(Math.random() * 100) + 20;
+            const isPlus = Math.random() > 0.5;
+            correctAnswer = isPlus ? n1 + n2 : n1 - n2;
+            document.getElementById('question').innerText = `${n1} ${isPlus ? '+' : '-'} ${n2} = ?`;
+        } 
+        else if (id === 2) { // Умножение
+            n1 = Math.floor(Math.random() * 8) + 2;
+            n2 = Math.floor(Math.random() * 9) + 1;
+            correctAnswer = n1 * n2;
+            document.getElementById('question').innerText = `${n1} × ${n2} = ?`;
+        }
+        else if (id === 8) { // Уравнения
+            let x = Math.floor(Math.random() * 15) + 2;
+            let a = Math.floor(Math.random() * 20) + 5;
+            correctAnswer = x;
+            document.getElementById('question').innerText = `x + ${a} = ${x + a}. x = ?`;
+        }
+        else { // Простая заглушка для остальных тем
+            n1 = Math.floor(Math.random() * 10);
+            n2 = Math.floor(Math.random() * 5);
+            correctAnswer = n1 + n2;
+            document.getElementById('question').innerText = `${n1} + ${n2} = ?`;
+        }
+        document.getElementById('user-input').value = '';
+        document.getElementById('user-input').focus();
+    }
+
+    function handleAnswer() {
+        const userVal = parseFloat(document.getElementById('user-input').value);
+        const feedback = document.getElementById('feedback');
+
+        if (userVal === correctAnswer) {
+            step++;
+            totalScore += 5;
+            feedback.innerText = "✅ Верно!";
+            feedback.style.color = "green";
+            if (step >= 10) {
+                finishTopic();
+            } else {
+                setTimeout(generateTask, 800);
+            }
+        } else {
+            step = 0;
+            feedback.innerText = "❌ Ошибка! Тест сброшен.";
+            feedback.style.color = "red";
+            setTimeout(generateTask, 1500);
+        }
+        updateProgress();
+        save();
+    }
+
+    function finishTopic() {
+        if (!completed.includes(currentTopic.id)) completed.push(currentTopic.id);
+        totalScore += 50;
+        save();
+        alert("Тема пройдена! Вы получили бонусные баллы.");
+        location.reload();
+    }
+
+    function updateProgress() {
+        document.getElementById('progress-fill').style.width = (step * 10) + "%";
+        document.getElementById('total-score').innerText = `Баллы: ${totalScore}`;
+    }
+
+    function save() {
+        localStorage.setItem('mathScore', totalScore);
+        localStorage.setItem('mathDone', JSON.stringify(completed));
+    }
+
+    // Слушаем Enter
+    document.getElementById('user-input').addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') handleAnswer();
+    });
+
+    initMenu();
+</script>
+
+</body>
+</html>
